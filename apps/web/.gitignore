@@ -1,0 +1,5 @@
+# local state wrangler and the PWA plugin write
+.wrangler/
+dev-dist/
+.dev.vars
+.env.local

@@ -1,0 +1,47 @@
+// The source of wrangler.jsonc, which tooling/wire renders from it: from
+// wiring.fixture.json for local work (`pnpm run wire:fixture`, committed as
+// that render), and on every Orun lane from the wiring documents the
+// `supabase` and `cloudflare-hyperdrive` Terraform roots lease-publish
+// (WIRING_SUPABASE_<ENV>, WIRING_CLOUDFLARE_HYPERDRIVE_<ENV>) — dev, which no
+// root applies to, from the fixture (component.yaml's buildCommand). Edit this
+// file, never wrangler.jsonc. The workers-assets composition deploys one
+// environment per job with no wrangler `--env`, so `__ENV__` names the
+// environment this is rendered for.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atomic-crm-web",
+  // The edge functions as routes, and the health check (worker/index.ts).
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    // The single-page app (vite build). Every path that is not a file is the
+    // app's own route, so it gets index.html.
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/functions/*", "/api/*"]
+  },
+  "observability": { "enabled": true },
+  // The Supabase project: what the browser signs in to and reads through
+  // (vite.config.ts inlines both into the build from here), and what the
+  // functions call. The anon key is the project's publishable key.
+  "vars": {
+    "SUPABASE_URL": "@@wiring(supabase/__ENV__:supabase_url)@@",
+    "SB_PUBLISHABLE_KEY": "@@wiring(supabase/__ENV__:supabase_anon_key)@@"
+  },
+  // The project's Postgres, fronted by Hyperdrive: merge_contacts and the MCP
+  // server's queries (upstream's SUPABASE_DB_URL).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "@@wiring(cloudflare-hyperdrive/__ENV__:hyperdrive_id)@@",
+      "localConnectionString": "postgres://postgres:postgres@127.0.0.1:54322/postgres"
+    }
+  ]
+  // Secrets are never vars. SUPABASE_SERVICE_ROLE_KEY (the admin functions:
+  // invite a user, reset a password, delete attachments, inbound email) is
+  // the Supabase root's output, which the deploy hands to this Worker as a
+  // Worker secret (component.yaml); POSTMARK_WEBHOOK_* are optional. Locally,
+  // .dev.vars.
+}
