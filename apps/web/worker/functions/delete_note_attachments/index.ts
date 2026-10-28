@@ -2,7 +2,7 @@ import { Deno } from "../_shared/deno";
 import { AuthMiddleware } from "../_shared/authentication";
 import { supabaseAdmin } from "../_shared/supabaseAdmin";
 
-const ATTACHMENTS_BUCKET =
+export const ATTACHMENTS_BUCKET =
   Deno.env.get("VITE_ATTACHMENTS_BUCKET") || "attachments";
 
 type NoteAttachment = {
@@ -15,7 +15,7 @@ type NoteRecord = {
   attachments?: NoteAttachment[] | null;
 };
 
-type WebhookPayload = {
+export type WebhookPayload = {
   type?: string | null;
   old_record?: NoteRecord | null;
   record?: NoteRecord | null;
@@ -58,7 +58,7 @@ export const handler = Deno.serve(async (req: Request) =>
   AuthMiddleware(req, async (req: Request) => deleteNoteAttachments(req)),
 );
 
-const getPathsToDelete = (payload: WebhookPayload): string[] => {
+export const getPathsToDelete = (payload: WebhookPayload): string[] => {
   const oldPaths = extractAttachmentPaths(payload.old_record?.attachments);
   const newPaths = extractAttachmentPaths(payload.record?.attachments);
 

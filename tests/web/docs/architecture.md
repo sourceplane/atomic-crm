@@ -1,14 +1,50 @@
 # web-tests — architecture
 
-Two Vitest projects, as upstream's `vitest.config.ts` has:
+A test package at `tests/web`. Its lane runs the suite before it builds.
 
-- **app** — upstream's tests of the React-Admin app and the Storybook stories
-  they render, in `src/upstream`, mirroring `apps/web/src` (a test's
-  relative import of app code is an `@/` import here). They run in a real
-  browser: Playwright's Chromium headless shell, which `pnpm test` installs
-  first, as upstream's CI does.
-- **worker** — in Node: upstream's edge-function tests (`src/functions`)
-  and the port's own (`src/worker`): the Worker's routes, the Supabase
-  client's fetch that sends function calls to the Worker, the build's
-  Supabase project, the committed wrangler render, the MCP server's
-  Postgres. `cloudflare:workers` is stood in for by `src/stubs`.
+## Suites (44)
+
+- `validateSql.test.ts`
+- `addNoteToContact.test.ts`
+- `extractMailContactData.test.ts`
+- `forwardedParser.test.ts`
+- `secondaryEmails.test.ts`
+- `ContactCreate.test.tsx`
+- `ContactEdit.test.tsx`
+- `ContactList.test.tsx`
+- `ContactShow.test.tsx`
+- `DashboardStepper.test.tsx`
+- `DataImport.test.tsx`
+- `DataImportButton.test.tsx`
+- `parseCell.test.ts`
+- `DealInputs.test.tsx`
+- `DealList.test.tsx`
+- `dealUtils.test.ts`
+- `MobileRefreshButton.test.tsx`
+- `PullToRefresh.test.tsx`
+- `NoteInputs.test.tsx`
+- `NoteInputsMobile.test.tsx`
+- `NotesIteratorMobile.test.tsx`
+- `getCompanyAvatar.test.ts`
+- `getContactAvatar.test.ts`
+- `i18nProvider.test.ts`
+- `dataProvider.test.ts`
+- `supabaseAdapter.test.ts`
+- `transformContainsFilter.test.ts`
+- `transformInFilter.test.ts`
+- `transformOrFilter.test.ts`
+- `searchDealCategories.test.ts`
+- `salesErrorNotification.test.ts`
+- `GlobalSearchButton.test.tsx`
+- `searchModel.test.ts`
+- `SettingsPage.test.ts`
+- `TaskCreateSheet.test.tsx`
+- `TasksListFilter.test.tsx`
+- `tasksPredicate.test.ts`
+- `oauth-consent-page.test.tsx`
+- `build-env.test.ts`
+- `cleanup.test.ts`
+- `functions-fetch.test.ts`
+- `request-postgres.test.ts`
+- `routes.test.ts`
+- `wrangler-config.test.ts`

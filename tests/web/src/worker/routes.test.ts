@@ -77,6 +77,12 @@ describe("the Worker's routes", () => {
     });
   });
 
+  it("drains the note-attachments queue on its schedule, given a database", async () => {
+    const waited: Promise<unknown>[] = [];
+    await worker.scheduled({}, env, { waitUntil: (p) => waited.push(p) });
+    expect(waited).toEqual([]);
+  });
+
   it("serves everything else from the app's assets", async () => {
     const res = await call("/");
     expect(await res.text()).toContain('<div id="root">');

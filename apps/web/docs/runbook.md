@@ -1,15 +1,40 @@
 # web — runbook
 
-| Symptom | Check | Fix |
-|---|---|---|
-| The deploy's smoke test fails on `/` | `curl -s https://<worker>/ \| grep 'id="root"'` | the build did not produce `dist/`: read the lane's `build-app` step |
-| `/api/health` says `"supabase": false` | the rendered `wrangler.jsonc` `vars` | the Supabase root has not applied for this environment, or its `WIRING_SUPABASE` secret is missing: re-run the `supabase` lane |
-| `/api/health` says `"admin": false`; inviting a user or resetting a password fails | `wrangler secret list --name atomic-crm-web-<env>` | the deploy found no `SUPABASE_SERVICE_ROLE_KEY`: re-run the `supabase` lane, then this one |
-| `/api/health` says `"database": false`; merging contacts fails | the `hyperdrive` block of the rendered config | re-run `cloudflare-hyperdrive`, then this lane |
-| Sign-in works but every list is empty | the browser console: PostgREST 401/42501 | the schema is not applied: re-run `db-migrate` |
-| `/functions/v1/postmark` answers 503 | — | inbound email is optional: store `POSTMARK_WEBHOOK_USER`, `POSTMARK_WEBHOOK_PASSWORD` and `POSTMARK_WEBHOOK_AUTHORIZED_IPS` as Orun secrets and redeploy |
+## How it runs
 
-Local: `pnpm --filter @app/web preview` builds the app and serves it with the
-Worker under `wrangler dev` on :8787 (secrets from `.dev.vars`, see
-`.dev.vars.example`); `pnpm --filter @app/web dev:demo` runs upstream's
-FakeRest demo with no Supabase at all.
+Pull requests verify it; a merge to `main` deploys it to `stage`, `prod`.
+CI plans what changed (`orun plan --changed`) and runs each lane with `orun run`;
+the plan orders a component after everything it depends on.
+
+## Local commands
+
+```bash
+pnpm --filter @app/web dev
+pnpm --filter @app/web build
+pnpm --filter @app/web typecheck
+pnpm --filter @app/web lint
+pnpm --filter @app/web preview
+```
+
+## Verify
+
+After a deploy the lane runs this smoke against the environment it
+deployed (`ORUN_ENVIRONMENT`); `DEPLOYED_URL` overrides the URL:
+
+```bash
+html=$(curl -sfL "${DEPLOYED_URL}/") && echo "${html}" | grep -q '<div id="root">' && health=$(curl -sf "${DEPLOYED_URL}/api/health") && echo "${health}" | grep -q '"ok":true' && test "$(curl -s -o /dev/null -w '%{http_code}' -X PATCH "${DEPLOYED_URL}/functions/v1/update_password")" = 401
+```
+
+## Rollback
+
+Revert the commit on `main`. The next convergence applies the previous desired
+state; nothing was changed out of band, so there is nothing else to undo.
+
+## Common failures
+
+- **A `WIRING_*` secret is missing at deploy**: an infrastructure lane upstream
+  has not applied for this environment yet. Within one convergence the plan
+  runs it first; on its own, re-run that lane.
+- **The smoke fails right after a first deploy**: a new workers.dev route can
+  answer 4xx for a few seconds and the lane retries. A failure that persists
+  is a regression in the deployed code.

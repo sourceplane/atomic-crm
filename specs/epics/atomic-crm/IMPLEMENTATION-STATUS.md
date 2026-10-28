@@ -3,8 +3,8 @@
 | Milestone | State | Landed |
 |---|---|---|
 | AT0 — the spec | done | AT-1 (#1) |
-| AT1 — the CRM on Workers | in review | AT-2 |
-| AT2 — the data plane | — | |
+| AT1 — the CRM on Workers | done | AT-2 (#2) |
+| AT2 — the data plane | in review | AT-3 |
 | AT3 — ready to instantiate | — | |
 | AT4 — a baseline | — | |
 
@@ -25,6 +25,33 @@
   server's Postgres) — `pnpm typecheck`, `pnpm lint`, `pnpm test` and
   `pnpm build` green.
 
+## AT2 as built
+
+- `infra/terraform/supabase` (supabase-starter's root): one project per
+  environment, Auth's Site URL and redirect allow-list the Worker, sign-up
+  without email confirmation; publishes the database credentials,
+  `WIRING_SUPABASE` (URL and publishable key) and `SUPABASE_SERVICE_ROLE_KEY`.
+- `infra/terraform/cloudflare-hyperdrive`: a Hyperdrive config in front of
+  each project's Postgres, caching off; publishes `WIRING_CLOUDFLARE_HYPERDRIVE`.
+- `packages/db` (`@saas/db`): the control migration, upstream's 30
+  `supabase/migrations` in their order, its seed, and the port's outbox — 33
+  checksummed migrations, applied through the Management API by
+  `infra/db-migrate` before the Worker deploys. Upstream's declarative
+  `supabase/schemas` were compared with its migration history on a
+  Supabase-shaped Postgres 16 first: the same schema except one column's
+  position and a grant the declarative files still give (`get_user_id_by_email`
+  to `anon` and `authenticated`, which the history revokes), so the history —
+  what `supabase db push` applies — is what ships.
+- `tests/db`: every migration by db-migrate's runner on a Supabase-shaped
+  PGlite, twice (the second applies nothing), then sign-up (the first user is
+  the administrator), contacts through the Data API's roles, the attachments
+  bucket and its policies, the seed, and the attachments outbox. The same
+  migrations apply as Supabase's non-superuser `postgres` on a real Postgres 16.
+- `apps/web` deploys after `supabase`, `cloudflare-hyperdrive` and
+  `db-migrate` (enforced on a push to `main`), renders its config from their
+  wiring documents, stores the service-role key as a Worker secret, and drains
+  the attachments outbox on a Cron Trigger every ten minutes.
+
 ## Departures from the upstream template
 
 | Where | Upstream | Here | Why |
@@ -44,3 +71,9 @@
 | Dependencies | npm, `package-lock.json` | pnpm, every direct dependency pinned to the version upstream's lockfile resolves; `@supabase/supabase-js`, `cropperjs`, `date-fns`, `react-router-dom` declared (transitive upstream) | Upstream's tests pass against its lockfile, and pnpm resolves only declared packages |
 | Tests | Colocated, Storybook stories as fixtures | `tests/web/src/upstream`, mirroring `src/`, with the 14 stories they render; Storybook itself is not carried | The repository's tests live in `tests/<app>` |
 | Folder `src/components/atomic-crm` | — | `src/components/crm` | A product's rename rewrites the repository's slug everywhere |
+| Migrations | `supabase db push` of `supabase/migrations` (+ `--include-seed`) | The same files, in order, through `@saas/db`'s runner (Management API), then the seed as a migration | Orun's db-migrate composition |
+| `pgjwt` | Created in `20260128165057_sso_handling`, never used | Not created | Not shipped on Supabase's Postgres 17 |
+| `http`, `pg_net` | Created unconditionally | Created where installed (every Supabase project); skipped elsewhere | The tests' Postgres has neither |
+| Note-attachments clean-up | Trigger → `pg_net` → `delete_note_attachments` (only for Data API changes) | Trigger → `private.note_attachment_cleanups` → the Worker's Cron Trigger → Storage (every change) | The database has no address for the Worker's route |
+| Service-role key | Supabase injects it into every edge function | The Supabase root's output, an Orun secret, stored as a Worker secret by the deploy | The functions are the Worker's |
+| Hyperdrive caching | — (direct pool) | Off | A CRM's reads must see the write before them |

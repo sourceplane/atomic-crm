@@ -127,6 +127,8 @@ describe("apps/web wrangler config", () => {
       run_worker_first: ["/functions/*", "/api/*"],
     });
     expect(config.hyperdrive[0].binding).toBe("HYPERDRIVE");
+    // the note-attachments queue's drain (worker/cleanup.ts)
+    expect(config.triggers).toEqual({ crons: ["*/10 * * * *"] });
   });
 
   it("never carries a secret as a var", () => {
