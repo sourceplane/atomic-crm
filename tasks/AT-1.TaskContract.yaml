@@ -1,0 +1,21 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: AT-1
+  title: "The spec"
+spec:
+  goal: The atomic-crm epic — declaration, doc set and task contracts — and the repository's intent, CI and tooling are on main
+  affects:
+    - .github/workflows
+    - intent.yaml
+    - package.json
+    - pnpm-workspace.yaml
+    - turbo.json
+    - tooling
+    - specs
+    - tasks
+  doneWhen:
+    - intent.yaml names the placeholder workspace ws_CHANGE_ME and ci.yml plans nothing for it
+    - epic.yaml, README, design, implementation plan, risks and status are merged
+    - the five task contracts exist
+  gates: []

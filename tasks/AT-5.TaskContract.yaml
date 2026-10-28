@@ -1,0 +1,29 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: AT-5
+  title: "A baseline"
+spec:
+  goal: atomic-crm becomes an Orun baseline that builds a new CRM in one landing
+  affects:
+    - blueprint.yaml
+    - repo-blueprint.yaml
+    - .baseline
+    - BOOTSTRAP.md
+    - README.md
+    - docs/phases
+    - hooks
+    - testing
+    - tooling
+    - ai
+    - .github/workflows
+    - specs
+    - tasks
+    - apps
+    - infra
+    - packages
+    - tests
+  doneWhen:
+    - blueprint.yaml and repo-blueprint.yaml agree (testing/manifest.test.sh)
+    - Baseline CI is green: contract tests, the docs check, the blueprint job and the site job
+  gates: []
