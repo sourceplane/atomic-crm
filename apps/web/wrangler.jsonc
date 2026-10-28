@@ -17,6 +17,11 @@
     "run_worker_first": ["/functions/*", "/api/*"]
   },
   "observability": { "enabled": true },
+  // Drains the queue of note attachments to delete (worker/cleanup.ts), which
+  // upstream's database webhook did through pg_net. One trigger per Worker.
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  },
   // The Supabase project: what the browser signs in to and reads through
   // (vite.config.ts inlines both into the build from here), and what the
   // functions call. The anon key is the project's publishable key.

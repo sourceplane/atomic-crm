@@ -4,13 +4,15 @@
 // upstream deploys to the Supabase project, as this Worker's own routes at the
 // same /functions/v1/<name> paths (supabase.functions.invoke is pointed at
 // this origin, src/components/crm/providers/supabase/supabase.ts), and the
-// health check the deploy smoke-tests.
+// health check the deploy smoke-tests. Its Cron Trigger drains the queue of
+// note attachments to delete (cleanup.ts).
 import { handler as deleteNoteAttachments } from "./functions/delete_note_attachments/index";
 import { handler as mcp } from "./functions/mcp/index";
 import { handler as mergeContacts } from "./functions/merge_contacts/index";
 import { handler as postmark } from "./functions/postmark/index";
 import { handler as updatePassword } from "./functions/update_password/index";
 import { handler as users } from "./functions/users/index";
+import { drainNoteAttachmentCleanups } from "./cleanup";
 
 type Handler = (req: Request) => Response | Promise<Response>;
 
@@ -59,5 +61,18 @@ export default {
     }
     if (pathname === "/api/health") return Response.json(health(env));
     return env.ASSETS.fetch(req);
+  },
+
+  async scheduled(
+    _controller: unknown,
+    env: Env,
+    ctx: { waitUntil(promise: Promise<unknown>): void },
+  ): Promise<void> {
+    if (!env.HYPERDRIVE) return;
+    ctx.waitUntil(
+      drainNoteAttachmentCleanups().then((r) => {
+        if (r.failed || r.skipped) console.warn("note attachments clean-up", JSON.stringify(r));
+      }),
+    );
   },
 };

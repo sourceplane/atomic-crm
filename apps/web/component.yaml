@@ -20,6 +20,40 @@ spec:
   change:
     inputs:
       - pnpm-lock.yaml
+  # The Supabase project and its Hyperdrive config must exist, and the schema
+  # be applied, before the Worker that reads them deploys: enforced on a push
+  # to main, advisory on a pull request (which plans and verifies only).
+  dependsOn:
+    - component: supabase
+      mode: enforced
+      modeRules:
+        - mode: advisory
+          when:
+            triggerRef: github-pull-request
+    - component: cloudflare-hyperdrive
+      mode: enforced
+      modeRules:
+        - mode: advisory
+          when:
+            triggerRef: github-pull-request
+    - component: db-migrate
+      mode: enforced
+      modeRules:
+        - mode: advisory
+          when:
+            triggerRef: github-pull-request
+  # What the deploy lane renders the Worker's config from (the roots' wiring
+  # documents) and stores as its Worker secrets. Optional: dev, which no root
+  # applies to, renders from the fixture, and a verify lane pushes nothing.
+  optionalSecretEnv:
+    WIRING_SUPABASE_STAGE: "secret://atomic-crm/atomic-crm/stage/WIRING_SUPABASE"
+    WIRING_SUPABASE_PROD: "secret://atomic-crm/atomic-crm/prod/WIRING_SUPABASE"
+    WIRING_CLOUDFLARE_HYPERDRIVE_STAGE: "secret://atomic-crm/atomic-crm/stage/WIRING_CLOUDFLARE_HYPERDRIVE"
+    WIRING_CLOUDFLARE_HYPERDRIVE_PROD: "secret://atomic-crm/atomic-crm/prod/WIRING_CLOUDFLARE_HYPERDRIVE"
+    SUPABASE_SERVICE_ROLE_KEY: "secret://atomic-crm/atomic-crm/{{ .environment }}/SUPABASE_SERVICE_ROLE_KEY"
+    POSTMARK_WEBHOOK_USER: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_USER"
+    POSTMARK_WEBHOOK_PASSWORD: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_PASSWORD"
+    POSTMARK_WEBHOOK_AUTHORIZED_IPS: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_AUTHORIZED_IPS"
   subscribe:
     environments:
       - name: dev

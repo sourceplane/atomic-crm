@@ -1,31 +1,44 @@
 # web — architecture
 
-One Worker per environment, `atomic-crm-web-<env>`.
+Built by the turbo pipeline from `apps/web` and deployed with wrangler.
 
-```
-browser ──▶ Static Assets (dist/: the React-Admin SPA, hash-routed)
-   │
-   ├──▶ Supabase project: Auth, PostgREST (the data provider), Storage
-   │
-   └──▶ /functions/v1/<name> ──▶ this Worker (worker/index.ts)
-                                   ├─ users, update_password, delete_note_attachments, postmark
-                                   │    └─▶ Supabase admin API (service-role key, a Worker secret)
-                                   └─ merge_contacts, mcp
-                                        └─▶ Postgres through Hyperdrive (HYPERDRIVE binding)
-```
+|                     |                                    |
+| ------------------- | ---------------------------------- |
+| Worker config       | `apps/web/wrangler.template.jsonc` |
+| Entry               | `worker/index.ts`                  |
+| Compatibility date  | `2026-10-01`                       |
+| Compatibility flags | `nodejs_compat`                    |
 
-- **The SPA** is upstream's (`src/`), built by Vite. A build inlines the
-  project's URL and publishable key from the `vars` of the rendered
-  `wrangler.jsonc` (`build-env.ts`), so the bundle and the Worker always
-  name the same project.
-- **The edge functions** are upstream's `supabase/functions`, in
-  `worker/functions`, nearly verbatim: `Deno.env.get` and `Deno.serve` come
-  from a two-function shim (`worker/functions/_shared/deno.ts`) and the
-  `jsr:`/`npm:` imports are npm packages. The Supabase client's `fetch` sends
-  `/functions/v1/*` to the page's own origin, so `supabase.functions.invoke`
-  reaches them unchanged.
-- **Postgres** is reached per request (Kysely over `pg` for
-  `merge_contacts`, one client per query for the MCP server): a Worker may not
-  reuse a socket another request opened, and Hyperdrive is the pool.
-- `run_worker_first` sends only `/functions/*` and `/api/*` to the Worker;
-  every other path is a file, or `index.html`.
+## Bindings
+
+| Binding      | Kind                         | Source                                       |
+| ------------ | ---------------------------- | -------------------------------------------- |
+| `HYPERDRIVE` | Hyperdrive (pooled Postgres) | `hyperdrive_id` from `cloudflare-hyperdrive` |
+| `ASSETS`     | Static assets                | `dist`                                       |
+
+Identifiers marked _from_ a component are filled in at deploy time from
+that component's published outputs for the environment being deployed.
+
+## Scheduled triggers
+
+- `*/10 * * * *`
+
+## Variables
+
+`SB_PUBLISHABLE_KEY`, `SUPABASE_URL`.
+
+## Wiring
+
+Resolved at deploy time from secrets the infrastructure lanes publish (names only):
+
+- `WIRING_CLOUDFLARE_HYPERDRIVE_PROD` (optional)
+- `WIRING_CLOUDFLARE_HYPERDRIVE_STAGE` (optional)
+- `WIRING_SUPABASE_PROD` (optional)
+- `WIRING_SUPABASE_STAGE` (optional)
+
+## Secrets resolved by the lane (names only)
+
+- `POSTMARK_WEBHOOK_AUTHORIZED_IPS` (optional)
+- `POSTMARK_WEBHOOK_PASSWORD` (optional)
+- `POSTMARK_WEBHOOK_USER` (optional)
+- `SUPABASE_SERVICE_ROLE_KEY` (optional)

@@ -1,0 +1,32 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: db-tests
+  description: The migrations' tests — the manifest and its checksums, then every migration applied by db-migrate's runner to a Supabase-shaped Postgres in process (PGlite), twice, and what the app does through the Data API on it — run on every pull request
+spec:
+  type: turbo-package
+  lifecycle: production
+  owner: platform
+  docs:
+    overview: docs/overview.md
+    pages:
+      - { path: docs/architecture.md, role: architecture, title: Architecture }
+      - { path: docs/runbook.md, role: runbook, title: Runbook }
+  domain: tests
+  change:
+    inputs:
+      - packages/db/**
+      - pnpm-lock.yaml
+  subscribe:
+    environments:
+      - name: dev
+        profile: quick-check
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+    buildCommand: pnpm exec turbo run build --filter=./
+    typecheckCommand: pnpm exec turbo run typecheck --filter=./
+    preBuildCommand: pnpm exec turbo run test --filter=./
+  labels:
+    team: platform
+    layer: test
