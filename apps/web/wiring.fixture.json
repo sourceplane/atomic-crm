@@ -1,0 +1,26 @@
+{
+  "supabase/dev": {
+    "supabase_url": "https://dev-project-ref.supabase.co",
+    "supabase_anon_key": "sb_publishable_fixture_dev"
+  },
+  "supabase/stage": {
+    "supabase_url": "https://stage-project-ref.supabase.co",
+    "supabase_anon_key": "sb_publishable_fixture_stage"
+  },
+  "supabase/prod": {
+    "supabase_url": "https://prod-project-ref.supabase.co",
+    "supabase_anon_key": "sb_publishable_fixture_prod"
+  },
+  "cloudflare-hyperdrive/dev": {
+    "hyperdrive_id": "00000000000000000000000000000002",
+    "hyperdrive_name": "dev-atomic-crm-dev"
+  },
+  "cloudflare-hyperdrive/stage": {
+    "hyperdrive_id": "00000000000000000000000000000001",
+    "hyperdrive_name": "stg-atomic-crm-stage"
+  },
+  "cloudflare-hyperdrive/prod": {
+    "hyperdrive_id": "00000000000000000000000000000003",
+    "hyperdrive_name": "prod-atomic-crm-prod"
+  }
+}

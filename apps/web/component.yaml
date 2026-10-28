@@ -1,0 +1,70 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+
+metadata:
+  name: web
+  description: The CRM — Marmelab's Atomic CRM single-page app as the Static Assets of a Cloudflare Worker whose own routes are the ported Supabase edge functions, per environment
+
+spec:
+  type: cloudflare-workers-assets-turbo
+  lifecycle: production
+  owner: platform
+  docs:
+    overview: docs/overview.md
+    pages:
+      - { path: docs/architecture.md, role: architecture, title: Architecture }
+      - { path: docs/runbook.md, role: runbook, title: Runbook }
+  domain: product
+  path: apps/web
+  lane: isolated
+  change:
+    inputs:
+      - pnpm-lock.yaml
+  subscribe:
+    environments:
+      - name: dev
+        profile: verify
+      - name: stage
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main
+      - name: prod
+        profile: verify
+        profileRules:
+          - profile: deploy
+            when:
+              triggerRef: github-push-main
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+
+    workspaceDir: ../..
+    appDir: .
+
+    turboFilter: "@app/web"
+    wranglerConfig: wrangler.jsonc
+
+    # wrangler bundles the Worker from its source on deploy; the build is the
+    # single-page app.
+    workerEntrypoint: worker/index.ts
+    assetsDir: dist
+
+    workerName: atomic-crm-web
+    environmentAwareWorkerName: true
+
+    workersDevSubdomain: your-workers-subdomain
+
+    installCommand: pnpm install --frozen-lockfile
+    # Render wrangler.jsonc for this environment (dev from the fixture), then
+    # build the app — which inlines the project's URL and publishable key from
+    # that render (vite.config.ts) — then hand the Worker its secrets.
+    buildCommand: node ../../tooling/wire/live.mjs --template wrangler.template.jsonc --out wrangler.jsonc --components supabase,cloudflare-hyperdrive --env "${ORUN_ENVIRONMENT}" --fixture wiring.fixture.json --fixture-envs dev && pnpm exec turbo run build --filter=@app/web && node ../../tooling/wire/worker-secrets.mjs --secret SUPABASE_SERVICE_ROLE_KEY --secret POSTMARK_WEBHOOK_USER --secret POSTMARK_WEBHOOK_PASSWORD --secret POSTMARK_WEBHOOK_AUTHORIZED_IPS --worker "atomic-crm-web-${ORUN_ENVIRONMENT}" --config wrangler.jsonc
+
+    smokeCommand: "html=$(curl -sfL \"${DEPLOYED_URL}/\") && echo \"${html}\" | grep -q '<div id=\"root\">' && health=$(curl -sf \"${DEPLOYED_URL}/api/health\") && echo \"${health}\" | grep -q '\"ok\":true' && test \"$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \"${DEPLOYED_URL}/functions/v1/update_password\")\" = 401"
+  labels:
+    team: platform
+    layer: delivery
+    surface: web
+    runtime: cloudflare

@@ -1,0 +1,8 @@
+# The Worker's secrets for `pnpm dev:worker` / `pnpm preview` (wrangler dev
+# reads .dev.vars). Copy to .dev.vars. Deployed, the service-role key is the
+# Supabase root's output and the deploy stores it; never commit it.
+SUPABASE_SERVICE_ROLE_KEY=
+# Optional: Postmark inbound email (worker/functions/postmark).
+POSTMARK_WEBHOOK_USER=
+POSTMARK_WEBHOOK_PASSWORD=
+POSTMARK_WEBHOOK_AUTHORIZED_IPS=
