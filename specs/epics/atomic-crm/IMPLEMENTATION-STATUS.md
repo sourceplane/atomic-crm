@@ -4,8 +4,8 @@
 |---|---|---|
 | AT0 — the spec | done | AT-1 (#1) |
 | AT1 — the CRM on Workers | done | AT-2 (#2) |
-| AT2 — the data plane | in review | AT-3 |
-| AT3 — ready to instantiate | — | |
+| AT2 — the data plane | done | AT-3 (#3) |
+| AT3 — ready to instantiate | in review | AT-4 |
 | AT4 — a baseline | — | |
 
 ## AT1 as built
@@ -51,6 +51,19 @@
   `db-migrate` (enforced on a push to `main`), renders its config from their
   wiring documents, stores the service-role key as a Worker secret, and drains
   the attachments outbox on a Cron Trigger every ten minutes.
+
+## AT3 as built
+
+- The README: what is where, getting started, running locally (upstream's
+  FakeRest demo with no backend; a local Supabase stack; a deployed
+  project), how it deploys and in what order, the first sign-in (the first
+  account is the administrator) and inviting a team without SMTP, the
+  optional services (Postmark inbound email, MCP clients), the mapping from
+  Supabase-hosted Atomic CRM, the Worker's size, a custom domain, and
+  upstream's telemetry.
+- Upstream's MIT licence at the root (and beside the app).
+- `VITE_INBOUND_EMAIL`, one optional Orun secret, is both inlined into the
+  build and stored on the Worker.
 
 ## Departures from the upstream template
 

@@ -42,3 +42,4 @@ Resolved at deploy time from secrets the infrastructure lanes publish (names onl
 - `POSTMARK_WEBHOOK_PASSWORD` (optional)
 - `POSTMARK_WEBHOOK_USER` (optional)
 - `SUPABASE_SERVICE_ROLE_KEY` (optional)
+- `VITE_INBOUND_EMAIL` (optional)
