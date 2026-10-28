@@ -1,0 +1,17 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: AT-2
+  title: "The CRM on Workers"
+spec:
+  goal: Atomic CRM's SPA and its edge functions run on one Cloudflare Worker with Static Assets
+  affects:
+    - apps/web
+    - tests/web
+    - pnpm-lock.yaml
+    - specs/epics/atomic-crm
+  doneWhen:
+    - the Worker builds and its dry run fits Workers Free
+    - wrangler dev serves the SPA and every /functions/v1/<name> route
+    - typecheck, lint, test and build are green
+  gates: []

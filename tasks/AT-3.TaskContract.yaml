@@ -1,0 +1,20 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: AT-3
+  title: "Supabase and Hyperdrive from Terraform, the schema through db-migrate"
+spec:
+  goal: Each environment's Supabase project and Hyperdrive config come from Terraform, and the schema from migrations db-migrate applies before the Worker deploys
+  affects:
+    - infra/terraform/supabase
+    - infra/terraform/cloudflare-hyperdrive
+    - packages/db
+    - infra/db-migrate
+    - tests/db
+    - apps/web
+    - pnpm-lock.yaml
+    - specs/epics/atomic-crm
+  doneWhen:
+    - terraform validate passes for both roots
+    - the migrations apply to a Supabase-shaped Postgres twice, the second applying nothing
+  gates: []

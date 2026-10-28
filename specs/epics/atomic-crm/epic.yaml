@@ -1,0 +1,39 @@
+# The epic's declaration. metadata.name equals the directory name; metadata.key
+# is the task-key prefix this epic reserves (AT → AT-1, AT-2, …). Owner, target
+# date and health are the platform's — never written here.
+apiVersion: orun.io/v1
+kind: Epic
+metadata:
+  name: atomic-crm
+  key: AT
+spec:
+  title: "Marmelab's Atomic CRM on Cloudflare Workers with Supabase"
+  summary: "Marmelab's Atomic CRM — contacts, companies, a deals kanban, tasks, notes with attachments, an activity log, CSV import, global search and an MCP endpoint, in a React-Admin single-page app over Supabase — runs on one Cloudflare Worker with Static Assets: the SPA is its assets and the six Supabase edge functions are its own routes, with Supabase Auth, PostgREST, Storage and Postgres (the Worker reaching it through Hyperdrive) in a Supabase project Terraform provisions per environment, the schema applied by db-migrate, inside the Cirrus baseline's repository conventions."
+  state: started
+  milestones:
+    - name: "AT0 — the spec"
+      exitCriteria:
+        - "intent, CI, tooling, the spec index, this doc set and the task contracts are on main"
+      tasks: [AT-1]
+    - name: "AT1 — the CRM on Workers"
+      exitCriteria:
+        - "apps/web is the upstream SPA built by Vite as the Static Assets of one Worker"
+        - "the six edge functions answer at the Worker's /functions/v1/<name> routes, the same code on workerd"
+        - "`pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` are green"
+      tasks: [AT-2]
+    - name: "AT2 — Supabase from Terraform, the schema through db-migrate"
+      exitCriteria:
+        - "infra/terraform/supabase and cloudflare-hyperdrive provision stage and prod and publish what the Worker renders its config from"
+        - "packages/db holds the schema as checksummed migrations, applied by infra/db-migrate through Supabase's Management API before the Worker deploys"
+      tasks: [AT-3]
+    - name: "AT3 — ready to instantiate"
+      exitCriteria:
+        - "the README says how to run, test, preview and deploy it, and maps every Supabase-hosted piece to what replaces it"
+        - "the as-built status records every departure from the upstream template"
+      tasks: [AT-4]
+    - name: "AT4 — a baseline"
+      exitCriteria:
+        - "blueprint.yaml (the console card) and repo-blueprint.yaml (the build) take a new CRM from nothing to live on stage and prod in ONE landing (01-product) and a hook-only record (02-docs), on orun v2.88.0's fast shape"
+        - "a product built from it carries the product only, renamed throughout to its own name, repository, Worker, Supabase projects and Hyperdrive configs"
+        - "Baseline CI is green: contract tests, generated component docs, the blueprint read by the pinned orun, the leak gate, the offline bootstrap with the product's own plan, and the end-to-end tier (the migrations applied to a Supabase-shaped Postgres, the Worker built, dry-deployed and served)"
+      tasks: [AT-5]

@@ -1,0 +1,15 @@
+apiVersion: orun.io/v1
+kind: TaskContract
+metadata:
+  name: AT-4
+  title: "Ready to instantiate"
+spec:
+  goal: A reader can run, test, preview and deploy it, and every departure from the upstream template is recorded
+  affects:
+    - README.md
+    - specs/epics/atomic-crm
+    - specs/epics/README.md
+  doneWhen:
+    - the README covers running, testing, previewing and deploying, and maps every Supabase-hosted piece
+    - IMPLEMENTATION-STATUS.md records every departure
+  gates: []
