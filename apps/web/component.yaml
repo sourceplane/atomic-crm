@@ -54,6 +54,9 @@ spec:
     POSTMARK_WEBHOOK_USER: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_USER"
     POSTMARK_WEBHOOK_PASSWORD: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_PASSWORD"
     POSTMARK_WEBHOOK_AUTHORIZED_IPS: "secret://atomic-crm/atomic-crm/{{ .environment }}/POSTMARK_WEBHOOK_AUTHORIZED_IPS"
+    # Postmark's inbound address: inlined into the build (the profile page
+    # shows it) and stored on the Worker (the postmark route reads it).
+    VITE_INBOUND_EMAIL: "secret://atomic-crm/atomic-crm/{{ .environment }}/VITE_INBOUND_EMAIL"
   subscribe:
     environments:
       - name: dev
@@ -94,7 +97,7 @@ spec:
     # Render wrangler.jsonc for this environment (dev from the fixture), then
     # build the app — which inlines the project's URL and publishable key from
     # that render (vite.config.ts) — then hand the Worker its secrets.
-    buildCommand: node ../../tooling/wire/live.mjs --template wrangler.template.jsonc --out wrangler.jsonc --components supabase,cloudflare-hyperdrive --env "${ORUN_ENVIRONMENT}" --fixture wiring.fixture.json --fixture-envs dev && pnpm exec turbo run build --filter=@app/web && node ../../tooling/wire/worker-secrets.mjs --secret SUPABASE_SERVICE_ROLE_KEY --secret POSTMARK_WEBHOOK_USER --secret POSTMARK_WEBHOOK_PASSWORD --secret POSTMARK_WEBHOOK_AUTHORIZED_IPS --worker "atomic-crm-web-${ORUN_ENVIRONMENT}" --config wrangler.jsonc
+    buildCommand: node ../../tooling/wire/live.mjs --template wrangler.template.jsonc --out wrangler.jsonc --components supabase,cloudflare-hyperdrive --env "${ORUN_ENVIRONMENT}" --fixture wiring.fixture.json --fixture-envs dev && pnpm exec turbo run build --filter=@app/web && node ../../tooling/wire/worker-secrets.mjs --secret SUPABASE_SERVICE_ROLE_KEY --secret POSTMARK_WEBHOOK_USER --secret POSTMARK_WEBHOOK_PASSWORD --secret POSTMARK_WEBHOOK_AUTHORIZED_IPS --secret VITE_INBOUND_EMAIL --worker "atomic-crm-web-${ORUN_ENVIRONMENT}" --config wrangler.jsonc
 
     smokeCommand: "html=$(curl -sfL \"${DEPLOYED_URL}/\") && echo \"${html}\" | grep -q '<div id=\"root\">' && health=$(curl -sf \"${DEPLOYED_URL}/api/health\") && echo \"${health}\" | grep -q '\"ok\":true' && test \"$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \"${DEPLOYED_URL}/functions/v1/update_password\")\" = 401"
   labels:
