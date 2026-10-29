@@ -13,6 +13,10 @@
 //
 //   --dev-vars <file>   write the same secrets as KEY=value lines instead
 //                       (wrangler dev reads .dev.vars as the Worker's secrets)
+//   --env <name>        read each secret from NAME_<ENV> (upper-cased) when it
+//                       is set, else NAME — for a value the job resolves for
+//                       every environment by name (SUPABASE_SERVICE_ROLE_KEY_STAGE
+//                       and _PROD in each job), stored under NAME
 //
 // The secrets are OPTIONAL, like the Orun secrets they come from: a variable
 // that is not set is skipped, named, and the Worker reads its absence at
@@ -40,6 +44,7 @@ function args(name) {
 const worker = arg("worker");
 const config = arg("config");
 const devVars = arg("dev-vars");
+const envSuffix = (arg("env") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "_");
 const names = args("secret");
 if (names.length === 0 || (!worker && !devVars)) {
   console.error(
@@ -57,7 +62,7 @@ for (const name of names) {
 const secrets = {};
 const unset = [];
 for (const name of names) {
-  const value = process.env[name];
+  const value = (envSuffix && process.env[`${name}_${envSuffix}`]) || process.env[name];
   if (typeof value === "string" && value.length > 0) secrets[name] = value;
   else unset.push(name);
 }

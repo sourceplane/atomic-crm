@@ -5,8 +5,8 @@
 | AT0 — the spec | done | AT-1 (#1) |
 | AT1 — the CRM on Workers | done | AT-2 (#2) |
 | AT2 — the data plane | done | AT-3 (#3) |
-| AT3 — ready to instantiate | in review | AT-4 |
-| AT4 — a baseline | — | |
+| AT3 — ready to instantiate | done | AT-4 (#4) |
+| AT4 — a baseline | in review | AT-5 |
 
 ## AT1 as built
 
@@ -64,6 +64,34 @@
 - Upstream's MIT licence at the root (and beside the app).
 - `VITE_INBOUND_EMAIL`, one optional Orun secret, is both inlined into the
   build and stored on the Worker.
+
+## AT4 as built
+
+- The card (`blueprint.yaml`: five brokered credentials, two milestones,
+  about seventeen minutes) and the build (`repo-blueprint.yaml`, on
+  saas-starter's shape — the same chain of Supabase, Hyperdrive, db-migrate
+  and one Worker: 26 modules, two phases; 01-product lands the whole product
+  as one pull request whose convergence provisions and deploys it in
+  dependency order; 02-docs records the deployment from probed facts — the
+  Worker's wiring as `/api/health` reports it and whether inbound email is
+  connected).
+- The rename engine renames the slug, the Worker, the secret refs and the
+  display name "Atomic CRM" (the app's title, its installable app's name,
+  its sign-up and inbound-email texts), and protects Marmelab's repository,
+  site, telemetry endpoint and release history.
+- The wiring documents and the service-role key are resolved fail-closed by
+  the Worker's deploy (`secretEnv`, both environments' rungs by name), and
+  `worker-secrets.mjs --env` stores the deploying environment's key; the
+  Postmark secrets are optional.
+- Tests: the contract tiers (manifest, phases, coverage, rebrand, retouch,
+  bootstrap-defer, wire, the docs check), the leak gate, the placement tier
+  and the end-to-end tier — the bootstrapped product's landing checks, the
+  migrations by its own runner on a Supabase-shaped Postgres, the stage lane
+  built and dry-deployed in its staged tree, and the Worker served against
+  that database and a stand-in for Supabase's Auth and Storage: the app under
+  its own name, the functions (a merge as the signed-in user through
+  Hyperdrive, a password reset, the MCP server reading the schema), and the
+  Cron Trigger draining the attachments queue.
 
 ## Departures from the upstream template
 

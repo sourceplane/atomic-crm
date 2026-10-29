@@ -4,199 +4,116 @@ Marmelab's [Atomic CRM](https://github.com/marmelab/atomic-crm) — contacts,
 companies, a deals kanban, tasks, notes with attachments, an activity log,
 CSV import, global search and an MCP endpoint for AI assistants, in a
 React-Admin single-page app over Supabase — running on **one Cloudflare
-Worker with Static Assets**: the app is its assets, and the six Supabase edge
-functions upstream deploys to the Supabase project are the Worker's own
-routes, at the same `/functions/v1/<name>` paths. **Supabase** stays what it
-is upstream — Auth, the Data API, Storage and the Postgres the schema lives
-in — with the Worker reaching that Postgres through **Cloudflare Hyperdrive**.
-Terraform provisions the Supabase project and the Hyperdrive config per
-environment and Orun's `db-migrate` applies the schema, on every merge to
-`main`.
+Worker with Static Assets**, whose own routes are the six Supabase edge
+functions upstream deploys to the Supabase project, with **Supabase** (Auth,
+the Data API, Storage, Postgres) provisioned per environment by Terraform
+through [Orun](https://github.com/sourceplane/orun), the Worker reaching its
+Postgres through **Cloudflare Hyperdrive**, and the schema — upstream's own
+migration history — applied by Orun's `db-migrate`; packaged as an **Orun
+baseline**: one command takes a new CRM from nothing to live on stage and
+prod, in its own repository, under its own name, in ONE landing.
 
-No other service is needed. The first person to sign up on a new deployment
-becomes its administrator and invites the rest of the team; inbound email
-(Postmark) is optional, and the CRM runs without it.
+The template's code is the code. What the port changes is what the Workers
+runtime and a fresh, unattended deployment force: the edge functions run on
+the Worker through a two-function Deno shim, opening a Postgres client per
+request through Hyperdrive; the Supabase client sends function calls to the
+Worker; the note-attachments webhook upstream fires through `pg_net` becomes
+a queue the Worker's Cron Trigger drains; and each project is created with
+its Auth pointed at the Worker, so the first account to sign up becomes the
+CRM's administrator with no SMTP server. What the baseline adds is
+everything needed to make a copy of it somebody else's — built the way
+[cirrus-baseline](https://github.com/sourceplane/cirrus-baseline) builds a
+product, in one landing. See [`specs/epics/atomic-crm`](specs/epics/atomic-crm/README.md)
+for the design, the milestones and the as-built status, including every
+departure.
 
-Atomic CRM is MIT-licensed by Marmelab ([LICENSE](LICENSE)); this port keeps
-its app, its screens, its data model and its edge functions' code.
-
-## What is here
-
-| Surface | Where |
-|---|---|
-| The app (React-Admin, upstream's `src/`) | `apps/web/src` |
-| The edge functions, as the Worker's routes | `apps/web/worker/functions` (upstream's `supabase/functions`), routed by `apps/web/worker/index.ts` |
-| The Worker's config | `apps/web/wrangler.template.jsonc` (rendered to `wrangler.jsonc`) |
-| Upstream's FakeRest demo (no backend) | `apps/web/demo` |
-| The schema | `packages/db/src/migrations` — upstream's `supabase/migrations`, its seed, the port's own |
-| The Supabase project, per environment | `infra/terraform/supabase` |
-| Hyperdrive, per environment | `infra/terraform/cloudflare-hyperdrive` |
-| The migrations' deploy | `infra/db-migrate` |
-| Tests | `tests/web` (upstream's app tests in Chromium, the edge functions', the Worker's), `tests/db` (every migration on a Supabase-shaped Postgres) |
-| Design and as-built status | [`specs/epics/atomic-crm`](specs/epics/atomic-crm/README.md) |
-
-## Getting started
+## Instantiating a product
 
 ```bash
-pnpm install
-pnpm --filter @app/web run wire:fixture   # re-render apps/web/wrangler.jsonc from its template (it is committed)
-pnpm typecheck
-pnpm lint
-pnpm test        # installs Playwright's Chromium headless shell the first time
-pnpm build       # vite build → apps/web/dist
+git clone --depth 1 --branch <baseline-tag> https://github.com/sourceplane/atomic-crm
+cd atomic-crm
+orun new --blueprint repo-blueprint.yaml --out ~/products/acme-crm --run-hooks --resume \
+  --set reponame=acme-crm --set productname="Acme CRM" \
+  --set githuborg=acme-inc --set subdomain=<workers-dev-subdomain>
 ```
 
-The build needs no Supabase project: it inlines the URL and publishable key
-of the project `apps/web/wrangler.jsonc` names (a placeholder until a deploy
-renders the real one).
-
-## Running it locally
-
-**Without a backend.** Upstream's demo runs the whole app on an in-memory
-FakeRest provider with generated data:
-
-```bash
-pnpm --filter @app/web dev:demo    # http://localhost:5174
-```
-
-**Against a local Supabase.** With the [Supabase CLI](https://supabase.com/docs/guides/local-development)
-(Docker):
-
-1. Start a local stack anywhere (`supabase init && supabase start`): its API
-   is `http://127.0.0.1:54321` and its Postgres `127.0.0.1:54322`, which is
-   what `apps/web/.env.development` and the Worker's local Hyperdrive
-   connection already name. Put its publishable key in
-   `apps/web/.env.local` as `VITE_SB_PUBLISHABLE_KEY` if it differs from
-   the one in `.env.development`.
-2. Apply the migrations once, in the manifest's order (CI applies the same
-   files to the real projects):
-
-   ```bash
-   for f in $(grep -oE 'path: "[^"]+"' packages/db/src/manifest.ts | cut -d'"' -f2); do
-     psql "postgres://postgres:postgres@127.0.0.1:54322/postgres" -f "packages/db/src/migrations/$f"
-   done
-   ```
-
-3. Give the Worker its secrets: copy `apps/web/.dev.vars.example` to
-   `apps/web/.dev.vars`, set `SUPABASE_SERVICE_ROLE_KEY` (from `supabase
-   status`), and add `SUPABASE_URL=http://127.0.0.1:54321` and
-   `SB_PUBLISHABLE_KEY=<the local key>` (they override the rendered vars).
-4. Run the app and the Worker's routes side by side:
-
-   ```bash
-   pnpm --filter @app/web dev:worker   # the edge functions, http://127.0.0.1:8787
-   pnpm --filter @app/web dev          # the app, http://localhost:5173 (proxies /functions)
-   ```
-
-   or the built app served by the Worker, as it deploys:
-   `pnpm --filter @app/web preview` (http://127.0.0.1:8787).
-
-**Against a deployed project.** Point `apps/web/.env.local`
-(`VITE_SUPABASE_URL`, `VITE_SB_PUBLISHABLE_KEY`) and `.dev.vars` at your
-stage project instead; the Worker's database is then that project's
-Postgres, through `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE`.
-
-## How it deploys
-
-Merges to `main` converge through [Orun](https://github.com/sourceplane/orun):
-`.github/workflows/ci.yml` plans the changed components and runs each lane
-against the workspace in `intent.yaml`. Per environment the order is
-enforced —
+Or, once the platform's registry lists it, from the Orun console (Baselines →
+`atomic-crm` → Build). Two phases: **`01-product`** creates the repository,
+mints the five brokered credentials (Cloudflare and Supabase) and lands the
+whole product as one pull request, whose convergence on `main` provisions and
+deploys it per environment in a fixed order —
 
 ```
 supabase ──▶ cloudflare-hyperdrive ──▶ db-migrate ──▶ web
 ```
 
-— because each reads what the one before it published: the project's
-credentials, the Hyperdrive id over its database, the schema the app reads.
-`stage` deploys first and `prod` once stage has converged on the same
-commit; `dev` only verifies. Every deploy is smoke-tested over HTTP: the app
-shell, `/api/health`, and a signed-out call to a function, which must be
-refused.
+— each edge `mode: enforced` on a push to main and advisory on a pull
+request; then **`02-docs`** records the live deployment from probed facts.
+**[BOOTSTRAP.md](BOOTSTRAP.md)** is the operator guide;
+[docs/phases/](docs/phases/README.md) has a page per phase.
 
-The pipeline holds one credential, GitHub's own `GITHUB_TOKEN`. The
-Cloudflare tokens and account id and the Supabase access token and org id
-are brokered per run from the workspace's connections; the Supabase
-project's credentials, its URL and publishable key, its service-role key and
-the Hyperdrive id are published by the Terraform applies as Orun secrets. The
-service-role key reaches the Worker as a Worker secret (`wrangler secret
-bulk`, over stdin) — never a var, never the browser's bundle.
+The new repository receives the **product only** — the CRM, the Terraform
+roots, the migrations, the tests, its CI, its tooling, a README of its own
+and its operating contract — renamed throughout to the product's name,
+repository, Worker, Supabase projects and Hyperdrive configs. None of this
+repository's machinery ships. **Inbound email is the owner's to connect
+afterwards** (the product's README, "Optional services"): no platform
+brokers Postmark, so the card asks for no Postmark key.
 
-**Deploy by hand.** Orunbase's **Deploy** button on a component, or **Run
-workflow** on the CI workflow in GitHub's Actions tab (on `main`), runs
-`ci.yml` for the environment and components you pick, and each one deploys
-exactly as a merge would. Leave the component blank to redeploy every
-component in that environment with nothing changed — after storing a
-secret, say.
+| What makes it a baseline | Where |
+|---|---|
+| The console card (inputs, secrets, programme) | `blueprint.yaml` |
+| The build document (modules, phases, hooks) | `repo-blueprint.yaml` |
+| This tree's identity, the product's README and the bootstrap's task contracts | `.baseline/` |
+| The rename engine (the display name "Atomic CRM", the slug, the Worker, the secret refs — never Marmelab's own links) | `tooling/rebrand/rebrand.mjs` |
+| The bootstrap's helpers (deferrals, redeploy marker, work-tree strip) | `tooling/bootstrap/` |
+| The component docs generator | `tooling/catalog/gen-component-docs.py` |
+| The deployment-record renderer | `hooks/render-deployment-docs.sh` |
+| The product's context pack | `ai/context/` |
+| The baseline's tests: contract, leak, offline bootstrap and plans, end to end | `testing/`, `.github/workflows/baseline.yml` |
+| Cutting a `baseline-vN` tag | `.github/workflows/tag.yml` |
 
-## The first sign-in
+## What is here (the product)
 
-A new deployment has no users, and the app opens on a sign-up form: the
-first account becomes the CRM's **administrator** (upstream's
-`handle_new_user` trigger). Sign-up signs straight in — each project is
-created with email confirmation off, because a Supabase project without SMTP
-of its own emails only its organization's members.
+| Surface | Where |
+|---|---|
+| The app (React-Admin, upstream's `src/`) | `apps/web/src` |
+| The edge functions, as the Worker's routes | `apps/web/worker/functions`, routed by `apps/web/worker/index.ts` |
+| The attachments queue's drain (Cron Trigger) | `apps/web/worker/cleanup.ts` |
+| The Worker's config | `apps/web/wrangler.template.jsonc` (rendered to `wrangler.jsonc`) |
+| Upstream's FakeRest demo | `apps/web/demo` |
+| The schema | `packages/db/src/migrations` — upstream's history, its seed, the port's outbox |
+| The Supabase project, Hyperdrive | `infra/terraform/supabase`, `infra/terraform/cloudflare-hyperdrive` |
+| The migrations' deploy | `infra/db-migrate` |
+| Tests | `tests/web`, `tests/db` |
 
-The administrator adds teammates from the user menu (**Users** → **New**), which sends each
-an invitation through Supabase Auth. Until the project has
-[its own SMTP server](https://supabase.com/docs/guides/auth/auth-smtp),
-those emails reach only the Supabase organization's members; with SMTP set,
-turn confirmation back on with `authEmailConfirmation: "true"` in
-`infra/terraform/supabase/component.yaml`.
+The product's own README (`.baseline/product/README.md`) covers running it
+locally, the first sign-in, the optional services, the mapping from
+Supabase-hosted Atomic CRM, the Worker's size and a custom domain.
 
-## Optional services
-
-Each value is this repository's Orun secret, per deployed environment:
+## Getting started
 
 ```bash
-orun secrets set POSTMARK_WEBHOOK_USER --env prod     # prompts for the value
+pnpm install
+pnpm typecheck
+pnpm lint
+pnpm test        # installs Playwright's Chromium headless shell the first time
+pnpm build
+pnpm --filter @app/web dev:demo   # upstream's demo, no backend: http://localhost:5174
 ```
 
-then redeploy `web` (**Deploy by hand**, above): a secret reaches the Worker
-when it deploys.
+## How it is tested
 
-| Service | Secrets | Without it |
+| Tier | What | Where |
 |---|---|---|
-| Postmark inbound email (notes from forwarded mail) | `POSTMARK_WEBHOOK_USER`, `POSTMARK_WEBHOOK_PASSWORD`, `POSTMARK_WEBHOOK_AUTHORIZED_IPS` (Postmark's webhook IPs); `VITE_INBOUND_EMAIL` (your Postmark inbound address, shown on the profile page). Point Postmark's inbound webhook at `https://<user>:<password>@atomic-crm-web-<env>.<subdomain>.workers.dev/functions/v1/postmark` | `/functions/v1/postmark` answers 503 and the profile page shows no inbound address |
-| MCP clients (Claude, ChatGPT…) | none — enable Supabase Auth's **OAuth Server** in the project's dashboard (Authentication → OAuth Server) | the MCP endpoint (`/functions/v1/mcp`, shown on the profile page) refuses sign-in |
+| contract | the card against the build, the phases, coverage, the rename engine, the bootstrap's helpers, the wiring path; the component docs | `testing/{manifest,phases,coverage,rebrand,retouch,bootstrap-defer,wire}.test.sh`, `gen-component-docs.py --check` |
+| blueprint | the build read by the pinned orun, the leak gate, the offline bootstrap and the product's own plans | `testing/leak.test.sh`, `testing/placement.test.sh` |
+| end to end | the bootstrapped product installed from its lockfile, typechecked, linted and tested; its migrations applied by db-migrate's runner to a Supabase-shaped Postgres; the Worker built, dry-deployed and served against it — the app, the health check, the functions refusing a signed-out caller, signing a user up and reading as them, the attachments queue drained | `testing/e2e.test.sh` |
 
-## How it maps to Supabase-hosted Atomic CRM
+## CI
 
-| Upstream | Here |
-|---|---|
-| The SPA on any static host (upstream: GitHub Pages) | The Worker's Static Assets, `atomic-crm-web-<env>` |
-| Six edge functions deployed to the Supabase project (Deno) | The Worker's routes at the same paths: `Deno.env`/`Deno.serve` from a two-function shim, the `jsr:`/`npm:` imports as npm packages |
-| `supabase.functions.invoke` → `<project>/functions/v1/<name>` | The same call; the Supabase client sends it to the page's own origin |
-| The functions' Postgres pool (`SUPABASE_DB_URL`) | `pg` through the Worker's Hyperdrive binding, a client per request |
-| The note-attachments webhook (`pg_net` → `delete_note_attachments`) | A queue (`private.note_attachment_cleanups`) the Worker's Cron Trigger drains every ten minutes |
-| `npm run supabase:remote:init` (a project created by hand, `supabase db push --include-roles --include-seed`) | `infra/terraform/supabase` per environment, then `infra/db-migrate` applying upstream's migrations and seed |
-| Supabase injects the service-role key into every function | The Supabase root's output, stored on the Worker as a Worker secret |
-| The MCP URL `<project>/functions/v1/mcp` | `<the Worker>/functions/v1/mcp` |
-| npm, Storybook, Husky | pnpm 10, Node 22; upstream's tests run as they do upstream (Vitest in Chromium, with the stories they render) |
-| "Deploy" (fork, `make` targets, a Supabase project) | `orun new --blueprint repo-blueprint.yaml` — a new repository, named, provisioned, deployed |
-
-Every departure is listed in
-[`specs/epics/atomic-crm/IMPLEMENTATION-STATUS.md`](specs/epics/atomic-crm/IMPLEMENTATION-STATUS.md).
-
-## Worker size
-
-Workers Free deploys a Worker up to 3 MiB compressed. Measured with
-`wrangler deploy --dry-run`: 561 KiB, every edge function included. The app's
-assets (14 MiB with source maps) are not part of that limit.
-
-## Custom domain
-
-The Worker answers on workers.dev from its first deploy. To serve it on your
-domain, attach the domain to the Worker in Cloudflare (Workers & Pages → the
-Worker → Settings → Domains & Routes), then set `SITE_URL` under the
-environment's `env:` in `intent.yaml` to that origin and merge: the next
-`supabase` apply makes it Auth's Site URL and redirect origin. `BASE_DOMAIN`
-beside it records the domain; the repository was born with the placeholder
-`atomic-crm.example.com`.
-
-## Telemetry
-
-Like upstream, the app's production build reports the hostname it is served
-from to Marmelab (`src/components/crm/root/CRM.tsx`), so Marmelab can count
-Atomic CRM installs. Pass `disableTelemetry` to `<CRM>` in
-`apps/web/src/App.tsx` to turn it off.
+| Workflow | What it runs | Ships to a product |
+|---|---|---|
+| `ci.yml` | the Orun pipeline, and the only workflow a product carries: `orun plan --changed`, then one job per lane. A pull request runs the verify lanes (the Worker built and dry-deployed per environment, both Terraform roots checked and planned, the migrations planned), except the bootstrap's own landings (`orun/BASE-*`), where `plan` alone runs and nothing waits for it — the landing was checked in the build box; a merge applies, migrates and deploys stage → prod. It plans nothing while `intent.yaml` names the placeholder workspace `ws_CHANGE_ME`, as this repository does. A manual run (Orunbase's Deploy button, or Run workflow on `main`) plans the environment and components it names under the push-to-main trigger, so they deploy as a merge deploys them | yes |
+| `baseline.yml` | the baseline's own tiers (above) | no |
+| `tag.yml` | cuts a `baseline-vN` tag (manual) | no |
