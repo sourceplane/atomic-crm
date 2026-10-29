@@ -1,0 +1,9 @@
+{
+  "_comment": "THIS TREE'S OWN IDENTITY — the FROM side of every rebrand. tooling/rebrand/rebrand.mjs reads it to know what to rename AWAY from; a product's identity is the --values file, which is the TO side. Change a value here only together with the tree: these strings must be what the tree actually contains, or the rename silently misses and the product ships carrying this baseline's name. `productName` is the app's display name as upstream ships it (its title, its installable app's name, its sign-up and inbound-email texts); `slug` is ALSO upstream's own name (Marmelab's atomic-crm), which the rebrand protects where the tree names the template; `domain` and `subdomain` are placeholders, because this baseline has never deployed under a name of its own; `githubOwner` is the owner in this repository's source link.",
+  "slug": "atomic-crm",
+  "pascal": "AtomicCrm",
+  "productName": "Atomic CRM",
+  "domain": "atomic-crm.example.com",
+  "subdomain": "your-workers-subdomain",
+  "githubOwner": "sourceplane"
+}

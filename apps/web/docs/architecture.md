@@ -31,15 +31,16 @@ that component's published outputs for the environment being deployed.
 
 Resolved at deploy time from secrets the infrastructure lanes publish (names only):
 
-- `WIRING_CLOUDFLARE_HYPERDRIVE_PROD` (optional)
-- `WIRING_CLOUDFLARE_HYPERDRIVE_STAGE` (optional)
-- `WIRING_SUPABASE_PROD` (optional)
-- `WIRING_SUPABASE_STAGE` (optional)
+- `WIRING_CLOUDFLARE_HYPERDRIVE_PROD`
+- `WIRING_CLOUDFLARE_HYPERDRIVE_STAGE`
+- `WIRING_SUPABASE_PROD`
+- `WIRING_SUPABASE_STAGE`
 
 ## Secrets resolved by the lane (names only)
 
+- `SUPABASE_SERVICE_ROLE_KEY_PROD`
+- `SUPABASE_SERVICE_ROLE_KEY_STAGE`
 - `POSTMARK_WEBHOOK_AUTHORIZED_IPS` (optional)
 - `POSTMARK_WEBHOOK_PASSWORD` (optional)
 - `POSTMARK_WEBHOOK_USER` (optional)
-- `SUPABASE_SERVICE_ROLE_KEY` (optional)
 - `VITE_INBOUND_EMAIL` (optional)
